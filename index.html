@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f5f8b">
+<title>IMI MoM App</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single column on phones, two panes (details | transcript) on laptops */
+:root{
+  --bg:#f4f6f9; --surface:#fff; --line:#dbe0e8; --fg:#1b2230; --muted:#5d6677;
+  --accent:#1f5f8b; --accent-ink:#fff; --rec:#c2362f; --dec:#2f7d4f; --act:#a8641a;
+  --dec-bg:#e6f3eb; --act-bg:#fbefe0; --hi:#fff59d; --soft:#edf1f6; --err:#b3261e; --ok:#2f7d4f;
+  --f-display:"IBM Plex Serif",Georgia,serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#11151c; --surface:#1a2029; --line:#2c3441; --fg:#e6e9ef; --muted:#9aa3b2;
+  --accent:#6fb2e0; --accent-ink:#0d1a24; --rec:#ef6b63; --dec:#6cc794; --act:#e3a35a;
+  --dec-bg:#173225; --act-bg:#36260f; --hi:#5c5317; --soft:#212936; --err:#f2948d; --ok:#6cc794; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);
+  padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));
+  padding-block:calc(12px + env(safe-area-inset-top,0px)) calc(40px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+h1{font:600 1.35rem/1.2 var(--f-display);margin:0}
+.sub{color:var(--muted);font-size:.82rem}
+.who-bar{display:flex;align-items:center;gap:10px;font-size:.85rem;color:var(--muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.label{font:600 .72rem var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.82rem;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:16px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 10px;width:100%}
+textarea{resize:vertical;min-height:56px}
+input:focus,select:focus,textarea:focus,button:focus-visible,[contenteditable]:focus{outline:2px solid var(--accent);outline-offset:1px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{font:500 .92rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:9px 14px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.rec{background:var(--rec);color:#fff;border-color:var(--rec)}
+.btn.link{border:0;background:none;color:var(--accent);padding:4px 0;min-height:0;text-decoration:underline}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.msg{font-size:.88rem;min-height:1.2em}
+.msg.err{color:var(--err)} .msg.ok{color:var(--ok)}
+/* login */
+.login{max-width:400px;margin:6vh auto 0;width:100%}
+.otp{font:500 1.6rem var(--f-mono);letter-spacing:.4em;text-align:center}
+/* app */
+.grid{display:grid;grid-template-columns:minmax(0,330px) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+details.meta summary{cursor:pointer;font-weight:600}
+details.meta[open] summary{margin-bottom:10px}
+.status{display:flex;align-items:center;gap:8px;font:500 .85rem var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.dot.on{background:var(--rec);animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.dot.on{animation:none}}
+.seg-toggle{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg-toggle button{border:0;background:var(--surface);color:var(--muted);font:500 .88rem var(--f-body);padding:8px 12px;cursor:pointer;min-height:40px}
+.seg-toggle button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{font:500 .85rem var(--f-body);border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:6px 12px;cursor:pointer;min-height:34px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip.add{border-style:dashed;color:var(--accent)}
+.hint{font-size:.8rem;color:var(--muted);line-height:1.45}
+.notice{border:1px solid var(--act);background:var(--act-bg);border-radius:8px;padding:10px 12px;font-size:.86rem}
+.counts{display:flex;gap:12px;font:500 .8rem var(--f-mono);color:var(--muted)}
+#transcript{display:flex;flex-direction:column;gap:2px;max-height:56vh;overflow-y:auto;min-height:200px}
+.seg{display:grid;grid-template-columns:46px minmax(0,1fr);gap:8px;padding:8px 6px;border-radius:6px;border-left:3px solid transparent}
+.seg.decision{border-left-color:var(--dec);background:var(--dec-bg)}
+.seg.action{border-left-color:var(--act);background:var(--act-bg)}
+.ts{font:400 .76rem var(--f-mono);color:var(--muted);padding-top:2px}
+.who{font:600 .78rem var(--f-body);color:var(--accent);cursor:pointer;background:none;border:0;padding:0}
+.txt{outline:none;word-wrap:break-word}
+.txt.hindi{background:var(--hi);font-style:italic;text-decoration:underline}
+.seg-tools{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.seg-tools button{font:500 .72rem var(--f-body);border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:4px;padding:3px 8px;cursor:pointer}
+.seg-tools button.on.d{background:var(--dec);border-color:var(--dec);color:var(--surface)}
+.seg-tools button.on.a{background:var(--act);border-color:var(--act);color:var(--surface)}
+.interim{color:var(--muted);font-style:italic;padding:6px 6px 6px 60px;min-height:1.5em}
+.empty{color:var(--muted);text-align:center;padding:40px 12px;font-size:.9rem}
+.sheet{position:fixed;inset:0;background:rgb(0 0 0 / .4);display:flex;align-items:flex-end;justify-content:center;z-index:20;padding:0 max(12px,env(safe-area-inset-left,0px)) calc(12px + env(safe-area-inset-bottom,0px))}
+.sheet .panel{width:100%;max-width:420px;margin-bottom:12px}
+@media (min-width:700px){.sheet{align-items:center}}
+.done-card{text-align:center;padding:28px 16px}
+.done-card a{color:var(--accent);word-break:break-all}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 16px;border-radius:6px;font-size:.88rem;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30;max-width:90vw}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>IMI MoM App</h1><div class="sub">Minutes of Meeting, recorded by voice</div></div>
+    <div class="who-bar" id="whoBar" hidden><span id="whoEmail"></span><button class="btn" id="bLogout">Log out</button></div>
+  </header>
+
+  <!-- LOGIN -->
+  <section id="vLogin" class="panel login" hidden>
+    <div id="stEmail">
+      <label class="f">IMI email<input id="lEmail" type="email" autocomplete="username" placeholder="name@imi.edu"></label>
+      <div class="controls" style="margin-top:12px"><button class="btn primary" id="bContinue" style="width:100%">Continue</button></div>
+    </div>
+    <div id="stPass" hidden>
+      <label class="f">Password<input id="lPass" type="password" autocomplete="current-password"></label>
+      <div class="controls" style="margin-top:12px;justify-content:space-between">
+        <button class="btn link" id="bForgot">Forgot password? Get a code</button>
+        <button class="btn primary" id="bLogin">Log in</button>
+      </div>
+    </div>
+    <div id="stOtp" hidden>
+      <p class="hint" id="otpInfo">We'll email you a 6-digit code.</p>
+      <button class="btn primary" id="bSendOtp">Send code</button>
+      <label class="f" style="margin-top:12px">6-digit code<input id="lOtp" class="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••"></label>
+      <div class="controls" style="margin-top:12px;justify-content:flex-end"><button class="btn primary" id="bVerify">Verify code</button></div>
+    </div>
+    <div id="stSet" hidden>
+      <p class="hint">Create your password: at least 8 characters, with letters and numbers.</p>
+      <label class="f">New password<input id="lNew" type="password" autocomplete="new-password"></label>
+      <label class="f">Confirm password<input id="lNew2" type="password" autocomplete="new-password"></label>
+      <div class="controls" style="margin-top:12px;justify-content:flex-end"><button class="btn primary" id="bSetPw">Save password</button></div>
+    </div>
+    <div class="msg" id="lMsg"></div>
+    <button class="btn link" id="bBack" hidden>← Use a different email</button>
+  </section>
+
+  <!-- APP -->
+  <section id="vApp" class="grid" hidden>
+    <div class="panel">
+      <details class="meta" open>
+        <summary>Meeting details</summary>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <label class="f">Meeting title<input id="mTitle" placeholder="e.g. Student Affairs Committee"></label>
+          <div class="row2"><label class="f">Date<input id="mDate" type="date"></label><label class="f">Time<input id="mTime" type="time"></label></div>
+          <label class="f">Venue<input id="mVenue" placeholder="e.g. Board Room, IMI Delhi"></label>
+          <label class="f">Chaired by<input id="mChair"></label>
+          <label class="f">Attendees (comma separated)<textarea id="mAtt" placeholder="Dr. Sharma, Priya Singh"></textarea></label>
+          <label class="f">Agenda (one per line)<textarea id="mAgenda"></textarea></label>
+        </div>
+      </details>
+    </div>
+
+    <div class="panel">
+      <div class="controls" style="justify-content:space-between">
+        <div class="controls">
+          <button class="btn rec" id="bStart">● Start</button>
+          <button class="btn" id="bPause" disabled>❚❚ Pause</button>
+        </div>
+        <div class="status"><span class="dot" id="dot"></span><span id="clock">00:00</span></div>
+      </div>
+      <div class="controls">
+        <span class="label">Language</span>
+        <div class="seg-toggle" role="group" aria-label="Spoken language">
+          <button id="lgEn" aria-pressed="true">English</button>
+          <button id="lgHi" aria-pressed="false">हिंदी</button>
+        </div>
+      </div>
+      <div id="notice" class="notice" hidden></div>
+      <div>
+        <div class="label" style="margin-bottom:6px">Who is speaking — tap before they talk</div>
+        <div class="chips" id="speakers"></div>
+        <div class="hint" style="margin-top:6px">New voice? Tap <b>+ New person</b> (it becomes Person 1, 2…). Tap a name on any line to rename that person everywhere.</div>
+      </div>
+      <div class="controls" style="justify-content:space-between">
+        <div class="label">Live transcript</div>
+        <div class="counts"><span id="cD">0 decisions</span><span id="cA">0 actions</span></div>
+      </div>
+      <div id="transcript"></div>
+      <div class="interim" id="interim"></div>
+      <div class="controls">
+        <input id="manual" placeholder="Type a line and press Enter" style="flex:1;min-width:160px">
+      </div>
+      <div class="controls" style="justify-content:space-between">
+        <button class="btn" id="bClear">Discard meeting</button>
+        <button class="btn primary" id="bEnd">End meeting &amp; save minutes</button>
+      </div>
+      <div class="msg" id="saveMsg"></div>
+    </div>
+  </section>
+
+  <section id="vDone" class="panel done-card" hidden>
+    <h2 style="font:600 1.3rem var(--f-display);margin:0">Minutes saved</h2>
+    <p id="doneText"></p>
+    <p><a id="doneLink" target="_blank" rel="noopener"></a></p>
+    <button class="btn primary" id="bNew">Start a new meeting</button>
+  </section>
+</div>
+
+<div class="sheet" id="renameSheet" hidden>
+  <div class="panel">
+    <div class="label">Rename speaker</div>
+    <p class="hint" id="renameInfo"></p>
+    <input id="renameInput" list="attList" placeholder="Name">
+    <datalist id="attList"></datalist>
+    <div class="controls" style="justify-content:flex-end">
+      <button class="btn" id="renameCancel">Cancel</button>
+      <button class="btn primary" id="renameOk">Rename everywhere</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+const API='https://script.google.com/macros/s/AKfycbw58pq5lsOLzLGWuKmNZdWtHKpP5ffVh-UKlxQ6-AVGwXt11enuN_4QjlM4sUe4KxRSOQ/exec';
+const $=id=>document.getElementById(id);
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=ms=>{const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),2200)}
+function show(v){['vLogin','vApp','vDone'].forEach(x=>$(x).hidden=x!==v)}
+
+async function api(payload){
+  const r=await fetch(API,{method:'POST',body:JSON.stringify(payload),redirect:'follow'});
+  if(!r.ok)throw new Error('Server error '+r.status);
+  return r.json();
+}
+
+/* ================= LOGIN ================= */
+let email='',setupToken='';
+function lmsg(t,kind){const m=$('lMsg');m.textContent=t||'';m.className='msg'+(kind?' '+kind:'')}
+function step(s){['stEmail','stPass','stOtp','stSet'].forEach(x=>$(x).hidden=x!==s);$('bBack').hidden=s==='stEmail'}
+function session(){const s=store.get('mom-session');return s&&s.exp>Date.now()?s:null}
+function busy(btn,on,label){btn.disabled=on;if(on){btn.dataset.l=btn.textContent;btn.textContent=label||'Please wait…'}else if(btn.dataset.l){btn.textContent=btn.dataset.l}}
+
+$('bContinue').onclick=async()=>{
+  email=$('lEmail').value.trim().toLowerCase();
+  if(!/^[^@\s]+@imi\.edu$/.test(email)){lmsg('Enter your IMI email (name@imi.edu).','err');return}
+  busy($('bContinue'),true);lmsg('');
+  try{const r=await api({action:'status',email});
+    if(!r.ok){lmsg(r.error,'err');return}
+    if(r.hasPassword){step('stPass');$('lPass').focus()}
+    else{step('stOtp');$('otpInfo').textContent='First time here. We\'ll email a 6-digit code to '+email+'.'}
+  }catch(e){lmsg('Could not reach the server. Check your internet and try again.','err')}
+  finally{busy($('bContinue'),false)}
+};
+$('lEmail').addEventListener('keydown',e=>{if(e.key==='Enter')$('bContinue').click()});
+$('bForgot').onclick=()=>{step('stOtp');$('otpInfo').textContent='We\'ll email a 6-digit code to '+email+' so you can set a new password.';lmsg('')};
+$('bBack').onclick=()=>{step('stEmail');lmsg('')};
+$('bSendOtp').onclick=async()=>{
+  busy($('bSendOtp'),true,'Sending…');
+  try{const r=await api({action:'requestOtp',email});lmsg(r.ok?r.message:r.error,r.ok?'ok':'err');if(r.ok)$('lOtp').focus()}
+  catch(e){lmsg('Could not send the code. Check your internet.','err')}
+  finally{busy($('bSendOtp'),false);$('bSendOtp').textContent='Resend code'}
+};
+$('bVerify').onclick=async()=>{
+  const otp=$('lOtp').value.replace(/\D/g,'');
+  if(otp.length!==6){lmsg('Enter the 6-digit code from your email.','err');return}
+  busy($('bVerify'),true);
+  try{const r=await api({action:'verifyOtp',email,otp});
+    if(!r.ok){lmsg(r.error,'err');return}
+    setupToken=r.setupToken;step('stSet');lmsg(r.message,'ok');$('lNew').focus();
+  }catch(e){lmsg('Could not verify. Check your internet.','err')}
+  finally{busy($('bVerify'),false)}
+};
+$('lOtp').addEventListener('keydown',e=>{if(e.key==='Enter')$('bVerify').click()});
+$('bSetPw').onclick=async()=>{
+  const p=$('lNew').value,p2=$('lNew2').value;
+  if(p!==p2){lmsg('The two passwords don\'t match.','err');return}
+  busy($('bSetPw'),true);
+  try{const r=await api({action:'setPassword',setupToken,password:p});
+    if(!r.ok){lmsg(r.error,'err');return}
+    loggedIn(r.token,r.email);toast('Password saved');
+  }catch(e){lmsg('Could not save the password. Check your internet.','err')}
+  finally{busy($('bSetPw'),false)}
+};
+$('bLogin').onclick=async()=>{
+  busy($('bLogin'),true,'Logging in…');
+  try{const r=await api({action:'login',email,password:$('lPass').value});
+    if(!r.ok){lmsg(r.error,'err');if(r.needOtp)step('stOtp');return}
+    loggedIn(r.token,r.email);
+  }catch(e){lmsg('Could not log in. Check your internet.','err')}
+  finally{busy($('bLogin'),false)}
+};
+$('lPass').addEventListener('keydown',e=>{if(e.key==='Enter')$('bLogin').click()});
+function loggedIn(token,em){
+  store.set('mom-session',{token,email:em,exp:Date.now()+6*3600*1000});
+  ['lPass','lNew','lNew2','lOtp'].forEach(i=>$(i).value='');lmsg('');
+  startApp();
+}
+$('bLogout').onclick=async()=>{
+  const s=session();if(recording)pauseRec();
+  if(s){try{await api({action:'logout',token:s.token})}catch(e){}}
+  store.del('mom-session');$('whoBar').hidden=true;step('stEmail');show('vLogin');
+};
+
+/* ================= MEETING ================= */
+const F=['mTitle','mDate','mTime','mVenue','mChair','mAtt','mAgenda'];
+let M={meta:{},lines:[],speakers:[],current:'',elapsed:0,lang:'en-IN',uid:0};
+let recording=false,startAt=0,timer=null,rec=null;
+const save=()=>{F.forEach(f=>M.meta[f]=$(f).value);store.set('mom-meeting',M)};
+F.forEach(f=>$(f).addEventListener('input',save));
+const now=()=>recording?M.elapsed+(Date.now()-startAt):M.elapsed;
+function tick(){$('clock').textContent=fmt(now())}
+
+function startApp(){
+  const s=session();$('whoBar').hidden=false;$('whoEmail').textContent=s.email;
+  const d=store.get('mom-meeting');
+  if(d&&d.lines){M=Object.assign(M,d)}
+  const n=new Date();
+  F.forEach(f=>$(f).value=(M.meta&&M.meta[f])||'');
+  if(!$('mDate').value)$('mDate').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+  if(!$('mTime').value)$('mTime').value=n.toTimeString().slice(0,5);
+  setLang(M.lang||'en-IN');renderSpeakers();renderLines(true);tick();
+  if(M.elapsed)$('bStart').textContent='● Resume';
+  const pend=store.get('mom-pending');
+  if(pend){$('saveMsg').className='msg err';$('saveMsg').textContent='A finished meeting is waiting to be saved. Tap "End meeting & save minutes" when you are online.'}
+  show('vApp');
+}
+
+/* language */
+function setLang(l){M.lang=l;$('lgEn').setAttribute('aria-pressed',l==='en-IN');$('lgHi').setAttribute('aria-pressed',l==='hi-IN');save();
+  if(recording&&rec){try{rec.stop()}catch(e){}}}
+$('lgEn').onclick=()=>setLang('en-IN');
+$('lgHi').onclick=()=>setLang('hi-IN');
+
+/* speakers */
+function renderSpeakers(){
+  $('speakers').innerHTML=M.speakers.map(n=>`<button class="chip" aria-pressed="${n===M.current}" data-v="${esc(n)}">${esc(n)}</button>`).join('')
+    +'<button class="chip add" id="addP">+ New person</button>';
+  $('attList').innerHTML=$('mAtt').value.split(',').map(s=>s.trim()).filter(Boolean).map(a=>`<option value="${esc(a)}">`).join('');
+}
+$('speakers').addEventListener('click',e=>{
+  const c=e.target.closest('.chip');if(!c)return;
+  if(c.id==='addP'){let i=1;while(M.speakers.includes('Person '+i))i++;const n='Person '+i;M.speakers.push(n);M.current=n}
+  else M.current=c.dataset.v;
+  renderSpeakers();save();
+});
+let renaming='';
+function openRename(name){renaming=name;$('renameInfo').textContent='Every line by "'+name+'" will show the new name.';$('renameInput').value=name.startsWith('Person ')?'':name;renderSpeakers();$('renameSheet').hidden=false;$('renameInput').focus()}
+$('renameCancel').onclick=()=>$('renameSheet').hidden=true;
+$('renameOk').onclick=()=>{
+  const nn=$('renameInput').value.trim();if(!nn){$('renameSheet').hidden=true;return}
+  M.lines.forEach(l=>{if(l.speaker===renaming)l.speaker=nn});
+  M.speakers=M.speakers.map(s=>s===renaming?nn:s).filter((s,i,a)=>a.indexOf(s)===i);
+  if(M.current===renaming)M.current=nn;
+  $('renameSheet').hidden=true;renderSpeakers();renderLines();save();toast('Renamed to '+nn);
+};
+
+/* lines */
+const DEC=/\b(decided|agreed|approved|resolved|finali[sz]ed|sanctioned|consensus|it was decided)\b|तय|मंजूर|फैसला/i;
+const ACT=/\b(action item|will (send|share|prepare|submit|coordinate|follow|arrange|check|update|circulate|draft|book|contact|email|call|collect|organi[sz]e|confirm|inform)|needs? to|has to|responsible for|follow up|to be (sent|shared|done|submitted))\b|करेंगे|करूंगा|भेज दूंगा|भेजेंगे/i;
+function addLine(raw,lang){
+  let t=(raw||'').trim();if(!t)return;
+  let kind='note';const m=t.match(/^(decision|action item|action)\b[\s:,.-]*/i);
+  if(m){kind=/^dec/i.test(m[1])?'decision':'action';t=t.slice(m[0].length)}
+  else if(DEC.test(t))kind='decision';else if(ACT.test(t))kind='action';
+  if(!M.current){M.speakers.includes('Person 1')||M.speakers.push('Person 1');M.current='Person 1';renderSpeakers()}
+  M.lines.push({id:++M.uid,t:now(),speaker:M.current,text:t.charAt(0).toUpperCase()+t.slice(1),kind,hindi:/[ऀ-ॿ]/.test(t)||lang==='hi-IN'});
+  renderLines(true);save();
+}
+function renderLines(scroll){
+  const box=$('transcript');
+  box.innerHTML=M.lines.length?M.lines.map(l=>`<div class="seg ${l.kind}" data-id="${l.id}">
+    <span class="ts">${fmt(l.t)}</span>
+    <div><button class="who" data-sp="${esc(l.speaker)}" title="Rename this speaker">${esc(l.speaker)}</button>
+      <div class="txt ${l.hindi?'hindi':''}" contenteditable="true">${esc(l.text)}</div>
+      <div class="seg-tools"><button class="d ${l.kind==='decision'?'on':''}" data-k="decision">Decision</button><button class="a ${l.kind==='action'?'on':''}" data-k="action">Action</button><button data-k="sp">Change speaker</button><button data-k="del">Delete</button></div>
+    </div></div>`).join(''):'<div class="empty">Tap <b>Start</b>, pick who is speaking, and talk. Lines appear here as people speak.<br>Hindi lines are kept in Hindi here and translated in the saved minutes.</div>';
+  $('cD').textContent=M.lines.filter(l=>l.kind==='decision').length+' decisions';
+  $('cA').textContent=M.lines.filter(l=>l.kind==='action').length+' actions';
+  if(scroll)box.scrollTop=box.scrollHeight;
+}
+$('transcript').addEventListener('click',e=>{
+  const who=e.target.closest('.who');if(who){openRename(who.dataset.sp);return}
+  const b=e.target.closest('.seg-tools button');if(!b)return;
+  const id=+b.closest('.seg').dataset.id,l=M.lines.find(x=>x.id===id);
+  if(b.dataset.k==='del')M.lines=M.lines.filter(x=>x.id!==id);
+  else if(b.dataset.k==='sp'){const list=M.speakers.length?M.speakers:['Person 1'];l.speaker=list[(list.indexOf(l.speaker)+1)%list.length]}
+  else l.kind=l.kind===b.dataset.k?'note':b.dataset.k;
+  renderLines();save();
+});
+$('transcript').addEventListener('input',e=>{const el=e.target.closest('.txt');if(!el)return;const l=M.lines.find(x=>x.id===+el.closest('.seg').dataset.id);l.text=el.textContent;l.hindi=/[ऀ-ॿ]/.test(l.text);save()});
+$('manual').addEventListener('keydown',e=>{if(e.key==='Enter'){addLine(e.target.value,M.lang);e.target.value=''}});
+
+/* speech */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+function notice(t){const n=$('notice');n.hidden=!t;n.innerHTML=t||''}
+if(!SR)notice('Live voice typing isn\'t available in this browser. Use <b>Chrome</b> or <b>Edge</b> on Android, Windows or Mac. You can still type lines below.');
+let netFails=0;
+function startRec(){
+  rec=new SR();rec.lang=M.lang;rec.continuous=true;rec.interimResults=true;
+  rec.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal){addLine(r[0].transcript,rec.lang);netFails=0;notice('')}else interim+=r[0].transcript}$('interim').textContent=interim};
+  rec.onerror=e=>{
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){notice('Microphone access is blocked. Allow the microphone for this page (the icon in the address bar), then tap Start.');pauseRec()}
+    else if(e.error==='network'){netFails++;notice('Weak or no internet. Voice typing will resume automatically when the connection returns. Keep typing lines meanwhile — nothing is lost.')}
+  };
+  rec.onend=()=>{if(recording){setTimeout(()=>{if(recording){try{rec.lang=M.lang;rec.start()}catch(e){}}},netFails?Math.min(5000,800*netFails):150)}};
+  rec.start();
+}
+function pauseRec(){if(recording)M.elapsed+=Date.now()-startAt;recording=false;clearInterval(timer);try{rec&&rec.stop()}catch(e){}
+  $('dot').classList.remove('on');$('bStart').disabled=!SR;$('bStart').textContent='● Resume';$('bPause').disabled=true;$('interim').textContent='';tick();save()}
+$('bStart').onclick=()=>{if(!SR)return;recording=true;startAt=Date.now();timer=setInterval(tick,500);$('dot').classList.add('on');$('bStart').disabled=true;$('bPause').disabled=false;
+  try{startRec()}catch(e){notice('Could not start the microphone.');pauseRec()}};
+$('bPause').onclick=pauseRec;
+let wake=null;document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&recording&&'wakeLock' in navigator)navigator.wakeLock.request('screen').then(w=>wake=w).catch(()=>{})});
+$('bStart').addEventListener('click',()=>{if('wakeLock' in navigator)navigator.wakeLock.request('screen').then(w=>wake=w).catch(()=>{})});
+
+/* discard */
+let clearArmed=false;
+$('bClear').onclick=()=>{
+  if(!clearArmed){clearArmed=true;$('bClear').textContent='Tap again to discard';setTimeout(()=>{clearArmed=false;$('bClear').textContent='Discard meeting'},3000);return}
+  clearArmed=false;pauseRec();resetMeeting();toast('Meeting discarded');
+};
+function resetMeeting(){M={meta:{},lines:[],speakers:[],current:'',elapsed:0,lang:M.lang,uid:0};store.del('mom-meeting');F.forEach(f=>$(f).value='');startApp();$('bStart').textContent='● Start'}
+
+/* end & save */
+function buildPayload(){
+  const g=f=>$(f).value.trim();
+  return{title:g('mTitle'),date:g('mDate'),time:g('mTime'),venue:g('mVenue'),chair:g('mChair'),
+    attendees:g('mAtt').split(',').map(s=>s.trim()).filter(Boolean),
+    agenda:g('mAgenda').split('\n').map(s=>s.trim()).filter(Boolean),
+    lines:M.lines.map(l=>({t:fmt(l.t),speaker:l.speaker,text:l.text,kind:l.kind,lang:l.hindi?'hi':'en'}))};
+}
+async function sendPending(){
+  const s=session();if(!s){toast('Please log in again');store.del('mom-session');show('vLogin');step('stEmail');return}
+  const meeting=store.get('mom-pending');if(!meeting)return;
+  const msg=$('saveMsg');msg.className='msg';msg.textContent='Saving minutes to Google Drive…';$('bEnd').disabled=true;
+  try{
+    const r=await api({action:'finishMeeting',token:s.token,meeting});
+    if(!r.ok){msg.className='msg err';msg.textContent=r.error;if(/session/i.test(r.error)){store.del('mom-session');setTimeout(()=>{show('vLogin');step('stEmail')},1500)}return}
+    store.del('mom-pending');store.del('mom-meeting');
+    $('doneText').textContent='Saved as '+r.fileName+' in "All repositories of MoM". The working file is cleared for the next meeting.';
+    $('doneLink').href=r.fileUrl;$('doneLink').textContent='Open '+r.fileName;
+    show('vDone');
+  }catch(e){msg.className='msg err';msg.textContent='No connection. The minutes are kept on this device and will be sent when you are back online.'}
+  finally{$('bEnd').disabled=false}
+}
+$('bEnd').onclick=()=>{
+  if(recording)pauseRec();
+  if(!store.get('mom-pending')){
+    if(!M.lines.length){$('saveMsg').className='msg err';$('saveMsg').textContent='Nothing recorded yet.';return}
+    store.set('mom-pending',buildPayload());
+  }
+  sendPending();
+};
+window.addEventListener('online',()=>{if(store.get('mom-pending')&&session())sendPending()});
+$('bNew').onclick=()=>{resetMeeting()};
+
+/* boot */
+if(session())startApp();else{show('vLogin');step('stEmail')}
+})();
+</script>
+</body>
+</html>
